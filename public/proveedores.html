@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRUD Proveedores</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <h1 class="title">CRUD de Proveedores</h1>
+        <div class="small">Tabla: proveedor</div>
+      </div>
+      <a href="/">← Volver al inicio</a>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div class="layout">
+      <section class="form-card">
+        <h2>Formulario</h2>
+        <input type="hidden" id="id_proveedor" />
+        <label for="razonsocial">Razón social</label><input type="text" id="razonsocial" />
+        <label for="direccion">Dirección</label><input type="text" id="direccion" />
+        <label for="telefono">Teléfono</label><input type="text" id="telefono" />
+        <div class="actions">
+          <button class="btn-primary" onclick="saveRecord()">Guardar</button>
+          <button class="btn-warning" onclick="clearForm()">Limpiar</button>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <h2>Listado</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>id_proveedor</th><th>Razón social</th><th>Dirección</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const ENTITY = 'proveedor';
+    const ID_FIELD = 'id_proveedor';
+    const FIELDS = [{"name": "razonsocial", "label": "Razón social", "type": "text"}, {"name": "direccion", "label": "Dirección", "type": "text"}, {"name": "telefono", "label": "Teléfono", "type": "text"}];
+
+    async function loadDependencies() {
+
+    }
+
+    function renderRow(item) {
+      return `
+        <tr>
+          <td>${item["id_proveedor"] ?? ""}</td><td>${item["razonsocial"] ?? ""}</td><td>${item["direccion"] ?? ""}</td><td>${item["telefono"] ?? ""}</td>
+          <td>
+            <div class="actions">
+              <button class="btn-warning" onclick="editRecord(${item[ID_FIELD]})">Editar</button>
+              <button class="btn-danger" onclick="deleteRecord(${item[ID_FIELD]})">Eliminar</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    async function loadTable() {
+      try {
+        const rows = await api(`/api/${ENTITY}`);
+        document.getElementById('tableBody').innerHTML = rows.map(renderRow).join('');
+      } catch (error) { showMessage(error.message, 'error'); }
+    }
+
+    async function saveRecord() {
+      try {
+        const id = document.getElementById(ID_FIELD).value;
+        const data = getFormData(FIELDS);
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/${ENTITY}/${id}` : `/api/${ENTITY}`;
+        await api(url, { method, body: JSON.stringify(data) });
+        showMessage(id ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
+        clearForm();
+        await loadTable();
+      } catch (error) { showMessage(error.message, 'error'); }
+    }
+
+    async function editRecord(id) {
+      try {
+        const row = await api(`/api/${ENTITY}/${id}`);
+        document.getElementById(ID_FIELD).value = row[ID_FIELD];
+        setFormData(FIELDS, row);
+      } catch (error) { showMessage(error.message, 'error'); }
+    }
+
+    async function deleteRecord(id) {
+      if (!confirm('¿Deseas eliminar este registro?')) return;
+      try {
+        await api(`/api/${ENTITY}/${id}`, { method: 'DELETE' });
+        showMessage('Registro eliminado correctamente');
+        await loadTable();
+      } catch (error) { showMessage(error.message, 'error'); }
+    }
+
+    function clearForm() { resetForm(FIELDS, ID_FIELD); }
+
+    (async function init() {
+      await loadDependencies();
+      await loadTable();
+    })();
+  </script>
+</body>
+</html>
