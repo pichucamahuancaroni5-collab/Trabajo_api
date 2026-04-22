@@ -1,118 +1,90 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRUD Productos</title>
-  <link rel="stylesheet" href="/css/styles.css" />
-</head>
+<html lang="es"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Productos · CRUD</title><link rel="stylesheet" href="/css/styles.css" /></head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <div>
-        <h1 class="title">CRUD de Productos</h1>
-        <div class="small">Tabla: producto con categoría y proveedor</div>
-      </div>
-      <a href="/">← Volver al inicio</a>
-    </div>
+<script src="/js/app.js"></script>
+<script>
+  const ENTITY = 'producto';
+  const ID_FIELD = 'id_producto';
+  const FIELDS = [{"name": "descripcion", "label": "Descripción", "type": "text"}, {"name": "precio", "label": "Precio", "type": "number", "min": 0}, {"name": "stock", "label": "Stock", "type": "number", "min": 0}, {"name": "id_categoria", "label": "Categoría", "type": "select"}, {"name": "id_proveedor", "label": "Proveedor", "type": "select"}];
+  renderShell(renderCrudPage({
+    title: 'Productos',
+    subtitle: 'Controla inventario, precio, categoría y proveedor.',
+    idField: ID_FIELD,
+    fields: FIELDS,
+    tableHead: ["ID", "Descripción", "Precio", "Stock", "ID categoría", "ID proveedor", "Categoría", "Proveedor", "Acciones"],
+    searchPlaceholder: 'Buscar en productos...'
+  }));
 
-    <div id="message" class="message"></div>
-
-    <div class="layout">
-      <section class="form-card">
-        <h2>Formulario</h2>
-        <input type="hidden" id="id_producto" />
-        <label for="descripcion">Descripción</label><input type="text" id="descripcion" />
-        <label for="precio">Precio</label><input type="number" id="precio" min="0" />
-        <label for="stock">Stock</label><input type="number" id="stock" min="0" />
-        <label for="id_categoria">Categoría</label><select id="id_categoria"></select>
-        <label for="id_proveedor">Proveedor</label><select id="id_proveedor"></select>
-        <div class="actions">
-          <button class="btn-primary" onclick="saveRecord()">Guardar</button>
-          <button class="btn-warning" onclick="clearForm()">Limpiar</button>
-        </div>
-      </section>
-
-      <section class="table-card">
-        <h2>Listado</h2>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>id_producto</th><th>Descripción</th><th>Precio</th><th>Stock</th><th>Categoría</th><th>Proveedor</th><th>Categoría</th><th>Proveedor</th><th>Acciones</th></tr></thead>
-            <tbody id="tableBody"></tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <script src="/js/app.js"></script>
-  <script>
-    const ENTITY = 'producto';
-    const ID_FIELD = 'id_producto';
-    const FIELDS = [{"name": "descripcion", "label": "Descripción", "type": "text"}, {"name": "precio", "label": "Precio", "type": "number"}, {"name": "stock", "label": "Stock", "type": "number"}, {"name": "id_categoria", "label": "Categoría", "type": "select"}, {"name": "id_proveedor", "label": "Proveedor", "type": "select"}];
-
-    async function loadDependencies() {
+  async function loadDependencies() {
       await fillSelect('id_categoria', '/api/categoria', 'id_categoria', item => `${item.id_categoria} - ${item.descripcion}`);
       await fillSelect('id_proveedor', '/api/proveedor', 'id_proveedor', item => `${item.id_proveedor} - ${item.razonsocial}`);
+  }
+
+  function renderRow(item) {
+    return `
+      <tr>
+        <td>${item.id_producto ?? ""}</td><td>${item.descripcion ?? ""}</td><td>${item.precio ?? ""}</td><td>${item.stock ?? ""}</td><td>${item.id_categoria ?? ""}</td><td>${item.id_proveedor ?? ""}</td><td>${item.categoria ?? ""}</td><td>${item.proveedor ?? ""}</td>
+        <td>
+          <div class="actions">
+            <button class="btn-warning" onclick="editRecord(${item[ID_FIELD]})">Editar</button>
+            <button class="btn-danger" onclick="deleteRecord(${item[ID_FIELD]})">Eliminar</button>
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  function renderTable(rows) {
+    const tbody = document.getElementById('tableBody');
+    if (!rows.length) {
+      tbody.innerHTML = renderEmpty(9, 'No se encontraron registros.');
+      return;
     }
+    tbody.innerHTML = rows.map(renderRow).join('');
+  }
 
-    function renderRow(item) {
-      return `
-        <tr>
-          <td>${item["id_producto"] ?? ""}</td><td>${item["descripcion"] ?? ""}</td><td>${item["precio"] ?? ""}</td><td>${item["stock"] ?? ""}</td><td>${item["id_categoria"] ?? ""}</td><td>${item["id_proveedor"] ?? ""}</td><td>${item["categoria"] ?? ""}</td><td>${item["proveedor"] ?? ""}</td>
-          <td>
-            <div class="actions">
-              <button class="btn-warning" onclick="editRecord(${item[ID_FIELD]})">Editar</button>
-              <button class="btn-danger" onclick="deleteRecord(${item[ID_FIELD]})">Eliminar</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }
+  async function loadTable() {
+    try {
+      const rows = await api(`/api/${ENTITY}`);
+      setRows(rows);
+      renderTable(rows);
+    } catch (error) { showMessage(error.message, 'error'); }
+  }
 
-    async function loadTable() {
-      try {
-        const rows = await api(`/api/${ENTITY}`);
-        document.getElementById('tableBody').innerHTML = rows.map(renderRow).join('');
-      } catch (error) { showMessage(error.message, 'error'); }
-    }
-
-    async function saveRecord() {
-      try {
-        const id = document.getElementById(ID_FIELD).value;
-        const data = getFormData(FIELDS);
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/${ENTITY}/${id}` : `/api/${ENTITY}`;
-        await api(url, { method, body: JSON.stringify(data) });
-        showMessage(id ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
-        clearForm();
-        await loadTable();
-      } catch (error) { showMessage(error.message, 'error'); }
-    }
-
-    async function editRecord(id) {
-      try {
-        const row = await api(`/api/${ENTITY}/${id}`);
-        document.getElementById(ID_FIELD).value = row[ID_FIELD];
-        setFormData(FIELDS, row);
-      } catch (error) { showMessage(error.message, 'error'); }
-    }
-
-    async function deleteRecord(id) {
-      if (!confirm('¿Deseas eliminar este registro?')) return;
-      try {
-        await api(`/api/${ENTITY}/${id}`, { method: 'DELETE' });
-        showMessage('Registro eliminado correctamente');
-        await loadTable();
-      } catch (error) { showMessage(error.message, 'error'); }
-    }
-
-    function clearForm() { resetForm(FIELDS, ID_FIELD); }
-
-    (async function init() {
-      await loadDependencies();
+  async function saveRecord() {
+    try {
+      const id = document.getElementById(ID_FIELD).value;
+      const data = getFormData(FIELDS);
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/${ENTITY}/${id}` : `/api/${ENTITY}`;
+      await api(url, { method, body: JSON.stringify(data) });
+      showMessage(id ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
+      clearForm();
       await loadTable();
-    })();
-  </script>
-</body>
-</html>
+    } catch (error) { showMessage(error.message, 'error'); }
+  }
+
+  async function editRecord(id) {
+    try {
+      const row = await api(`/api/${ENTITY}/${id}`);
+      document.getElementById(ID_FIELD).value = row[ID_FIELD];
+      setFormData(FIELDS, row);
+    } catch (error) { showMessage(error.message, 'error'); }
+  }
+
+  async function deleteRecord(id) {
+    if (!confirm('¿Deseas eliminar este registro?')) return;
+    try {
+      await api(`/api/${ENTITY}/${id}`, { method: 'DELETE' });
+      showMessage('Registro eliminado correctamente');
+      await loadTable();
+    } catch (error) { showMessage(error.message, 'error'); }
+  }
+
+  function clearForm() { resetForm(FIELDS, ID_FIELD); }
+
+  (async function init() {
+    await loadDependencies();
+    await loadTable();
+  })();
+</script>
+</body></html>

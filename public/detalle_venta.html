@@ -1,116 +1,90 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRUD Detalle de Venta</title>
-  <link rel="stylesheet" href="/css/styles.css" />
-</head>
+<html lang="es"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Detalle de venta · CRUD</title><link rel="stylesheet" href="/css/styles.css" /></head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <div>
-        <h1 class="title">CRUD de Detalle de Venta</h1>
-        <div class="small">Tabla: detalle_venta con producto y venta</div>
-      </div>
-      <a href="/">← Volver al inicio</a>
-    </div>
+<script src="/js/app.js"></script>
+<script>
+  const ENTITY = 'detalle_venta';
+  const ID_FIELD = 'id_detventa';
+  const FIELDS = [{"name": "cantidad", "label": "Cantidad", "type": "number", "min": 0}, {"name": "id_producto", "label": "Producto", "type": "select"}, {"name": "id_venta", "label": "Venta", "type": "select"}];
+  renderShell(renderCrudPage({
+    title: 'Detalle de venta',
+    subtitle: 'Asocia cantidad, producto y venta en una sola vista.',
+    idField: ID_FIELD,
+    fields: FIELDS,
+    tableHead: ["ID", "Cantidad", "ID producto", "ID venta", "Producto", "Fecha venta", "Acciones"],
+    searchPlaceholder: 'Buscar en detalle de venta...'
+  }));
 
-    <div id="message" class="message"></div>
-
-    <div class="layout">
-      <section class="form-card">
-        <h2>Formulario</h2>
-        <input type="hidden" id="id_detventa" />
-        <label for="cantidad">Cantidad</label><input type="number" id="cantidad" min="0" />
-        <label for="id_producto">Producto</label><select id="id_producto"></select>
-        <label for="id_venta">Venta</label><select id="id_venta"></select>
-        <div class="actions">
-          <button class="btn-primary" onclick="saveRecord()">Guardar</button>
-          <button class="btn-warning" onclick="clearForm()">Limpiar</button>
-        </div>
-      </section>
-
-      <section class="table-card">
-        <h2>Listado</h2>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>id_detventa</th><th>Cantidad</th><th>Producto</th><th>Venta</th><th>Producto</th><th>Fecha venta</th><th>Acciones</th></tr></thead>
-            <tbody id="tableBody"></tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <script src="/js/app.js"></script>
-  <script>
-    const ENTITY = 'detalle_venta';
-    const ID_FIELD = 'id_detventa';
-    const FIELDS = [{"name": "cantidad", "label": "Cantidad", "type": "number"}, {"name": "id_producto", "label": "Producto", "type": "select"}, {"name": "id_venta", "label": "Venta", "type": "select"}];
-
-    async function loadDependencies() {
+  async function loadDependencies() {
       await fillSelect('id_producto', '/api/producto', 'id_producto', item => `${item.id_producto} - ${item.descripcion}`);
       await fillSelect('id_venta', '/api/ventas', 'id_venta', item => `${item.id_venta} - ${item.fecha}`);
+  }
+
+  function renderRow(item) {
+    return `
+      <tr>
+        <td>${item.id_detventa ?? ""}</td><td>${item.cantidad ?? ""}</td><td>${item.id_producto ?? ""}</td><td>${item.id_venta ?? ""}</td><td>${item.producto ?? ""}</td><td>${item.fecha_venta ?? ""}</td>
+        <td>
+          <div class="actions">
+            <button class="btn-warning" onclick="editRecord(${item[ID_FIELD]})">Editar</button>
+            <button class="btn-danger" onclick="deleteRecord(${item[ID_FIELD]})">Eliminar</button>
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  function renderTable(rows) {
+    const tbody = document.getElementById('tableBody');
+    if (!rows.length) {
+      tbody.innerHTML = renderEmpty(7, 'No se encontraron registros.');
+      return;
     }
+    tbody.innerHTML = rows.map(renderRow).join('');
+  }
 
-    function renderRow(item) {
-      return `
-        <tr>
-          <td>${item["id_detventa"] ?? ""}</td><td>${item["cantidad"] ?? ""}</td><td>${item["id_producto"] ?? ""}</td><td>${item["id_venta"] ?? ""}</td><td>${item["producto"] ?? ""}</td><td>${item["fecha_venta"] ?? ""}</td>
-          <td>
-            <div class="actions">
-              <button class="btn-warning" onclick="editRecord(${item[ID_FIELD]})">Editar</button>
-              <button class="btn-danger" onclick="deleteRecord(${item[ID_FIELD]})">Eliminar</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }
+  async function loadTable() {
+    try {
+      const rows = await api(`/api/${ENTITY}`);
+      setRows(rows);
+      renderTable(rows);
+    } catch (error) { showMessage(error.message, 'error'); }
+  }
 
-    async function loadTable() {
-      try {
-        const rows = await api(`/api/${ENTITY}`);
-        document.getElementById('tableBody').innerHTML = rows.map(renderRow).join('');
-      } catch (error) { showMessage(error.message, 'error'); }
-    }
-
-    async function saveRecord() {
-      try {
-        const id = document.getElementById(ID_FIELD).value;
-        const data = getFormData(FIELDS);
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/${ENTITY}/${id}` : `/api/${ENTITY}`;
-        await api(url, { method, body: JSON.stringify(data) });
-        showMessage(id ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
-        clearForm();
-        await loadTable();
-      } catch (error) { showMessage(error.message, 'error'); }
-    }
-
-    async function editRecord(id) {
-      try {
-        const row = await api(`/api/${ENTITY}/${id}`);
-        document.getElementById(ID_FIELD).value = row[ID_FIELD];
-        setFormData(FIELDS, row);
-      } catch (error) { showMessage(error.message, 'error'); }
-    }
-
-    async function deleteRecord(id) {
-      if (!confirm('¿Deseas eliminar este registro?')) return;
-      try {
-        await api(`/api/${ENTITY}/${id}`, { method: 'DELETE' });
-        showMessage('Registro eliminado correctamente');
-        await loadTable();
-      } catch (error) { showMessage(error.message, 'error'); }
-    }
-
-    function clearForm() { resetForm(FIELDS, ID_FIELD); }
-
-    (async function init() {
-      await loadDependencies();
+  async function saveRecord() {
+    try {
+      const id = document.getElementById(ID_FIELD).value;
+      const data = getFormData(FIELDS);
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/${ENTITY}/${id}` : `/api/${ENTITY}`;
+      await api(url, { method, body: JSON.stringify(data) });
+      showMessage(id ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
+      clearForm();
       await loadTable();
-    })();
-  </script>
-</body>
-</html>
+    } catch (error) { showMessage(error.message, 'error'); }
+  }
+
+  async function editRecord(id) {
+    try {
+      const row = await api(`/api/${ENTITY}/${id}`);
+      document.getElementById(ID_FIELD).value = row[ID_FIELD];
+      setFormData(FIELDS, row);
+    } catch (error) { showMessage(error.message, 'error'); }
+  }
+
+  async function deleteRecord(id) {
+    if (!confirm('¿Deseas eliminar este registro?')) return;
+    try {
+      await api(`/api/${ENTITY}/${id}`, { method: 'DELETE' });
+      showMessage('Registro eliminado correctamente');
+      await loadTable();
+    } catch (error) { showMessage(error.message, 'error'); }
+  }
+
+  function clearForm() { resetForm(FIELDS, ID_FIELD); }
+
+  (async function init() {
+    await loadDependencies();
+    await loadTable();
+  })();
+</script>
+</body></html>
