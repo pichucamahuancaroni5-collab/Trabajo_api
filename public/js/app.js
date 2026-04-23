@@ -131,7 +131,7 @@ async function loadDashboard() {
     <section class="hero">
       <div class="hero-card">
         <div class="kicker">Sistema de gestión</div>
-        <h2>Dashboard de tu base de datos</h2>
+        <h2>Panel de datos</h2>
         <p>Administra categorías, clientes, proveedores, productos, ventas y detalle de venta desde un panel moderno, responsive y conectado a Express + MySQL.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="/productos.html">Ir a productos</a>
